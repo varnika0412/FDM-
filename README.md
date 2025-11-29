@@ -35,86 +35,84 @@ Study of TDM pulse amplitude modulation/ demodulation with transmitter block (cl
 
 # program :
 ```
-clc; clear; close;
+clc; 
+clear; 
+close;
 
-fs = 100000;
-T = 0.02;             
-t = 0:1/fs:T-1/fs;   
-N = length(t);          
+fs = 50000;
+t = 0:1/fs:0.05;
 
-m1 = sin(2*%pi*200*t);
-m2 = sin(2*%pi*400*t);
-m3 = sin(2*%pi*600*t);
-m4 = sin(2*%pi*800*t);
-m5 = sin(2*%pi*1000*t);
-m6 = sin(2*%pi*1200*t);
+m1 = 3.7*sin(2*%pi*303*t);
+m2 = 3.8*sin(2*%pi*313*t);
+m3 = 3.9*sin(2*%pi*323*t);
+m4 = 4.0*sin(2*%pi*333*t);
+m5 = 4.1*sin(2*%pi*343*t);
+m6 = 4.2*sin(2*%pi*353*t);
 
-fc = [6000 11000 16000 21000 26000 31000]; // Hz
+c1 = cos(2*%pi*2000*t);
+c2 = cos(2*%pi*4000*t);
+c3 = cos(2*%pi*6000*t);
+c4 = cos(2*%pi*8000*t);
+c5 = cos(2*%pi*10000*t);
+c6 = cos(2*%pi*12000*t);
 
-s1 = m1 .* cos(2*%pi*fc(1)*t);
-s2 = m2 .* cos(2*%pi*fc(2)*t);
-s3 = m3 .* cos(2*%pi*fc(3)*t);
-s4 = m4 .* cos(2*%pi*fc(4)*t);
-s5 = m5 .* cos(2*%pi*fc(5)*t);
-s6 = m6 .* cos(2*%pi*fc(6)*t);
+s1 = m1 .* c1;
+s2 = m2 .* c2;
+s3 = m3 .* c3;
+s4 = m4 .* c4;
+s5 = m5 .* c5;
+s6 = m6 .* c6;
 
 fdm = s1 + s2 + s3 + s4 + s5 + s6;
 
-F = fft(fdm);
-freq = (0:N-1)*(fs/N);
+r1 = fdm .* c1;
+r2 = fdm .* c2;
+r3 = fdm .* c3;
+r4 = fdm .* c4;
+r5 = fdm .* c5;
+r6 = fdm .* c6;
 
-fshift = freq;
-idx = find(freq > fs/2);
-if ~isempty(idx) then
-    fshift(idx) = freq(idx) - fs;
-end
 
-msg_bw = 1500;
-halfband = msg_bw + 300; 
+cutoff_hz = 400;
+norm_cutoff = cutoff_hz/(fs/2);
 
-recovered = zeros(6, N);
+M = 101; 
 
-for k = 1:6
-    BPmask = zeros(1, N);
-    BPmask = (abs(fshift - fc(k)) <= halfband) | (abs(fshift + fc(k)) <= halfband);
-    Fbp = F .* BPmask;
-    xbp = fft(Fbp, -1) / N;
-    down = 2 .* xbp .* cos(2*%pi*fc(k)*t);
-    D = fft(down);
-    LPmask = (abs(fshift) <= msg_bw);
-    Dlp = D .* LPmask;
-    base = fft(Dlp, -1) / N;
-    recovered(k, :) = real(base);
-end
+[h, w] = wfir('lp', M, [norm_cutoff, 0], 'hm', 0);  
+
+d1 = conv(r1, h, 'same');
+d2 = conv(r2, h, 'same');
+d3 = conv(r3, h, 'same');
+d4 = conv(r4, h, 'same');
+d5 = conv(r5, h, 'same');
+d6 = conv(r6, h, 'same');
+
+d1 = 2 * d1;
+d2 = 2 * d2;
+d3 = 2 * d3;
+d4 = 2 * d4;
+d5 = 2 * d5;
+d6 = 2 * d6;
 
 figure(1);
-subplot(3,2,1); plot(t, m1); title("Original m1 (200 Hz)");
-subplot(3,2,2); plot(t, m2); title("Original m2 (400 Hz)");
-subplot(3,2,3); plot(t, m3); title("Original m3 (600 Hz)");
-subplot(3,2,4); plot(t, m4); title("Original m4 (800 Hz)");
-subplot(3,2,5); plot(t, m5); title("Original m5 (1 kHz)");
-subplot(3,2,6); plot(t, m6); title("Original m6 (1.2 kHz)");
-xlabel("Time (s)");
+subplot(3,2,1); plot(t,m1); title("Message 1");
+subplot(3,2,2); plot(t,m2); title("Message 2");
+subplot(3,2,3); plot(t,m3); title("Message 3");
+subplot(3,2,4); plot(t,m4); title("Message 4");
+subplot(3,2,5); plot(t,m5); title("Message 5");
+subplot(3,2,6); plot(t,m6); title("Message 6");
 
 figure(2);
-plot(t, fdm);
-title("FDM Composite Signal (time domain)");
-xlabel("Time (s)");
+plot(t,fdm); title("Multiplexed FDM");
 
 figure(3);
-subplot(3,2,1); plot(t, recovered(1,:)); title("Recovered m1");
-subplot(3,2,2); plot(t, recovered(2,:)); title("Recovered m2");
-subplot(3,2,3); plot(t, recovered(3,:)); title("Recovered m3");
-subplot(3,2,4); plot(t, recovered(4,:)); title("Recovered m4");
-subplot(3,2,5); plot(t, recovered(5,:)); title("Recovered m5");
-subplot(3,2,6); plot(t, recovered(6,:)); title("Recovered m6");
-xlabel("Time (s)");
+subplot(3,2,1); plot(t,d1); title("Demod 1");
+subplot(3,2,2); plot(t,d2); title("Demod 2");
+subplot(3,2,3); plot(t,d3); title("Demod 3");
+subplot(3,2,4); plot(t,d4); title("Demod 4");
+subplot(3,2,5); plot(t,d5); title("Demod 5");
+subplot(3,2,6); plot(t,d6); title("Demod 6");
 
-disp("✅ FFT-based demux complete. Compare originals vs recovered visually or compute MSE:");
-for k=1:6
-    mse = sum((recovered(k,:) - eval("m"+string(k))).^2)/N;
-    disp("Channel "+string(k)+" MSE = "+string(mse));
-end
 ```
 
 # Model Graph:
@@ -122,15 +120,17 @@ end
 <img width="736" height="896" alt="image" src="https://github.com/user-attachments/assets/6010e09f-79c1-4573-b709-48e2a832db21" />
 
 # output:
-<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/03d2b3f0-c494-41dc-b5b5-b5bc3a1ac4b0" />
-<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/68fa1c1a-c28f-41f7-b7c2-61869dadb240" />
-<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/44e92d8f-2053-40c6-8222-deda084d2e95" />
+<img width="1916" height="1020" alt="image" src="https://github.com/user-attachments/assets/1940cd17-72e0-4762-8f0a-aff462b91bbc" />
+<img width="1915" height="927" alt="image" src="https://github.com/user-attachments/assets/431f6508-85c1-4967-a6d3-3219c904f3dd" />
+<img width="1906" height="1010" alt="image" src="https://github.com/user-attachments/assets/a7dab45c-7768-42ce-b36b-28e66dd81134" />
+
 
 
 
 # Tabulation:
-<img width="824" height="1280" alt="image" src="https://github.com/user-attachments/assets/50ea056d-f9fd-4faf-b499-86e23350ebd7" />
-<img width="849" height="1280" alt="image" src="https://github.com/user-attachments/assets/59be4eec-b719-414e-a312-a2036457e4dd" />
+<img width="976" height="1600" alt="image" src="https://github.com/user-attachments/assets/614e2f8b-a04f-4691-9ecb-597e96c928d3" />
+<img width="962" height="1462" alt="image" src="https://github.com/user-attachments/assets/9b771492-1975-43b1-a865-f7278a7a7123" />
+
 
 
 # Result:
